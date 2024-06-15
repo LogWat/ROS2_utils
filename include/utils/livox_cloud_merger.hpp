@@ -65,20 +65,50 @@ private:
     void concatenate_pointclouds(sensor_msgs::msg::PointCloud2::SharedPtr& pointcloud_out,
                                 const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl1,
                                 const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
-        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_pcl(new pcl::PointCloud<pcl::PointXYZI>);
-        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_transformed_pcl(new pcl::PointCloud<pcl::PointXYZI>);
-        pcl::fromROSMsg(*pcl2, *pcl2_pcl);
-        pcl::transformPointCloud(*pcl2_pcl, *pcl2_transformed_pcl, lidar_diff_transform_);
-        
-        int offset_ring = pcl1->point_step;
-
+        // 一旦全部pointcloud_outにコピー
         for (size_t i = 0; i < pcl1->data.size(); i += pcl1->point_step) {
-            memcpy(&pointcloud_out->data[i], &pcl1->data[i], pcl1->point_step);
+            for (auto &field : pcl1->fields) {
+                memcpy(&pointcloud_out->data[i + field.offset], &pcl1->data[i + field.offset], field.datatype * field.count / 8);
+            }
         }
-
-        for (size_t i = 0; i < pcl2_transformed_pcl->points.size(); ++i) {
-            size_t offset = pcl1->data.size() + i * pointcloud_out->point_step;
-            memcpy(&pointcloud_out->data[offset], &pcl2_transformed_pcl->points[i], pcl1->point_step);
+        for (size_t i = 0; i < pcl2->data.size(); i += pcl2->point_step) {
+            for (auto &field : pcl2->fields) {
+                memcpy(&pointcloud_out->data[i + pcl1->point_step + field.offset], &pcl2->data[i + field.offset], field.datatype * field.count / 8);
+            }
+        }
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl1_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl1_transformed_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_transformed_pcl(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::fromROSMsg(*pcl1, *pcl1_pcl);
+        pcl::fromROSMsg(*pcl2, *pcl2_pcl);
+        pcl::transformPointCloud(*pcl1_pcl, *pcl1_transformed_pcl, lidar_diff_transform_1_);
+        pcl::transformPointCloud(*pcl2_pcl, *pcl2_transformed_pcl, lidar_diff_transform_2_);
+        // point stepが変わってるのでx, y, z, intensityのみコピー
+        size_t out_x_idx, out_y_idx, out_z_idx, out_intensity_idx;
+        for (size_t i = 0; i < pointcloud_out->fields.size(); ++i) {
+            if (pointcloud_out->fields[i].name == "x") {
+                out_x_idx = i;
+            } else if (pointcloud_out->fields[i].name == "y") {
+                out_y_idx = i;
+            } else if (pointcloud_out->fields[i].name == "z") {
+                out_z_idx = i;
+            } else if (pointcloud_out->fields[i].name == "intensity") {
+                out_intensity_idx = i;
+            }
+        }
+        for (size_t i = 0; i < pointcloud_out->data.size(); i += pointcloud_out->point_step) {
+            if (i < pcl1->data.size()) {
+                *(float *)(&pointcloud_out->data[i + out_x_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].x);
+                *(float *)(&pointcloud_out->data[i + out_y_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].y);
+                *(float *)(&pointcloud_out->data[i + out_z_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].z);
+                *(float *)(&pointcloud_out->data[i + out_intensity_idx]) = *(float *)(&pcl1_pcl->points[i / pcl1->point_step].intensity);
+            } else {
+                *(float *)(&pointcloud_out->data[i + out_x_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].x);
+                *(float *)(&pointcloud_out->data[i + out_y_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].y);
+                *(float *)(&pointcloud_out->data[i + out_z_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].z);
+                *(float *)(&pointcloud_out->data[i + out_intensity_idx]) = *(float *)(&pcl2_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].intensity);
+            }
         }
     }
 
@@ -142,9 +172,9 @@ private:
     std::shared_ptr<Sync> sync_;
 
     std::string pointcloud1_topic_, pointcloud2_topic_, output_topic_, frame_id_;
-    unsigned int ring_num_;
-    double lidar_diffx_, lidar_diffy_, lidar_diffz_, lidar_diffroll_, lidar_diffpitch_, lidar_diffyaw_;
-    Eigen::Affine3f lidar_diff_transform_;
+    int ring_num_;
+    double lidar_diffz_; // 2つのLiDARのz座標の差
+    Eigen::Affine3f lidar_diff_transform_1_, lidar_diff_transform_2_;
 
 
 };
