@@ -1,4 +1,4 @@
-#include "livox_cloud_merger.hpp"
+#include "utils/livox_cloud_merger.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -6,7 +6,7 @@ namespace utils {
 
 LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
     : Node("livox_cloud_merger", options),
-      ring_(0)
+      ring_(10)
     {
         // パラメータの取得
         this->declare_parameter<std::string>("pointcloud1_topic", "pointcloud1");
