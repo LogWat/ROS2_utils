@@ -5,8 +5,7 @@
 namespace utils {
 
 LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
-    : Node("livox_cloud_merger", options),
-      ring_(10)
+    : Node("livox_cloud_merger", options)
     {
         // パラメータの取得
         this->declare_parameter<std::string>("pointcloud1_topic", "pointcloud1");
@@ -19,6 +18,7 @@ LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
         this->declare_parameter<double>("lidar_diffroll", 0.0);
         this->declare_parameter<double>("lidar_diffpitch", 0.0);
         this->declare_parameter<double>("lidar_diffyaw", 0.0);
+        this->declare_parameter<unsigned int>("ring_num", 10);
 
         this->get_parameter("pointcloud1_topic", pointcloud1_topic_);
         this->get_parameter("pointcloud2_topic", pointcloud2_topic_);
@@ -30,6 +30,7 @@ LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
         this->get_parameter("lidar_diffroll", lidar_diffroll_);
         this->get_parameter("lidar_diffpitch", lidar_diffpitch_);
         this->get_parameter("lidar_diffyaw", lidar_diffyaw_);
+        this->get_parameter("ring_num", ring_num_);
 
         pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic_, 10);
 
