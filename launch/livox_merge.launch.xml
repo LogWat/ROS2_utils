@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="bag" default="test.bag"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <!-- livox_cloud_merger -->
+  <node 
+    name="livox_cloud_merger"
+    namespace="utils"
+    pkg="utils"
+    exec="component_container_cm"
+    output="screen"
+  >
+    <param name="use_sim_time" value="true"/>
+    <node 
+      name="livox_cloud_merger"
+      pkg="utils"
+      exec="livox_cloud_merger"
+      output="screen"
+      respawn="false"
+    >
+      <param name="use_sim_time" value="$(arg use_sim_time)"/>
+      <param name="cloud_topic" value="/livox/lidar"/>
+      <param name="pointcloud1_topic" value="/livox/pointcloud1"/>
+      <param name="pointcloud2_topic" value="/livox/pointcloud2"/>
+      <param name="output_topic" value="/livox/merged_cloud"/>
+      <param name="frame_id" value="livox_frame"/>
+      <param name="lidar_diffz" value="0.47"/>
+      <param name="ring_num" value="10"/>
+    </node>
+  </node>  
+
+  <!-- rosbag -->
+  <node 
+    name="rosbag"
+    pkg="rosbag"
+    exec="play"
+    output="screen"
+    args="$(arg bag)"
+  >
+    <param name="use_sim_time" value="$(arg use_sim_time)"/>
+  </node>
+
+</launch>

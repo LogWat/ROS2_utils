@@ -35,7 +35,7 @@ private:
                                   const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
         pointcloud_out->header = pcl1->header;
         pointcloud_out->header.stamp = (pcl1->header.stamp.sec > pcl2->header.stamp.sec) ? pcl1->header.stamp : pcl2->header.stamp;
-        pointcloud_out->header.frame_id = frame_id_;
+        pointcloud_out->header.frame_id = frame_id_; // 新しいframe_idに変更
         pointcloud_out->is_bigendian = pcl1->is_bigendian;
         pointcloud_out->point_step = pcl1->point_step + sizeof(uint16_t);
         pointcloud_out->fields = pcl1->fields;
