@@ -75,9 +75,13 @@ ament_target_dependencies(
 )
 
 install(TARGETS livox_cloud_merger
-  DESTINATION lib/${PROJECT_NAME})
+  DESTINATION lib)
 install(TARGETS vel2odom
-  DESTINATION lib/${PROJECT_NAME})
+  DESTINATION lib)
+install (TARGETS livox_imu_collector
+  DESTINATION lib)
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
