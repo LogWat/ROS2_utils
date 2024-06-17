@@ -55,9 +55,10 @@ private:
     }
 
     void resize_ponintcloud_data(sensor_msgs::msg::PointCloud2::SharedPtr& pointcloud_out,
-                      const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl1) {
+                      const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl1,
+                        const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
         pointcloud_out->height = pcl1->height;
-        pointcloud_out->width = pcl1->width * 2;
+        pointcloud_out->width = pcl1->width + pcl2->width;
         pointcloud_out->row_step = pointcloud_out->point_step * pointcloud_out->width;
         pointcloud_out->data.resize(pointcloud_out->row_step * pointcloud_out->height);
     }
@@ -66,6 +67,7 @@ private:
                                 const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl1,
                                 const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
         // 一旦全部pointcloud_outにコピー
+        // RCLCPP_INFO(this->get_logger(), "pcl1 point size: %d, pcl2 point size: %d", pcl1->width, pcl2->width);
         for (size_t i = 0; i < pcl1->data.size(); i += pcl1->point_step) {
             for (auto &field : pcl1->fields) {
                 memcpy(&pointcloud_out->data[i + field.offset], &pcl1->data[i + field.offset], field.datatype * field.count / 8);
@@ -97,18 +99,19 @@ private:
                 out_intensity_idx = i;
             }
         }
-        for (size_t i = 0; i < pointcloud_out->data.size(); i += pointcloud_out->point_step) {
-            if (i < pcl1->data.size()) {
-                *(float *)(&pointcloud_out->data[i + out_x_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].x);
-                *(float *)(&pointcloud_out->data[i + out_y_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].y);
-                *(float *)(&pointcloud_out->data[i + out_z_idx]) = *(float *)(&pcl1_transformed_pcl->points[i / pcl1->point_step].z);
-                *(float *)(&pointcloud_out->data[i + out_intensity_idx]) = *(float *)(&pcl1_pcl->points[i / pcl1->point_step].intensity);
-            } else {
-                *(float *)(&pointcloud_out->data[i + out_x_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].x);
-                *(float *)(&pointcloud_out->data[i + out_y_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].y);
-                *(float *)(&pointcloud_out->data[i + out_z_idx]) = *(float *)(&pcl2_transformed_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].z);
-                *(float *)(&pointcloud_out->data[i + out_intensity_idx]) = *(float *)(&pcl2_pcl->points[(i - pcl1->data.size()) / pcl2->point_step].intensity);
-            }
+        // RCLCPP_INFO(this->get_logger(), "pointcloud_out point size: %ld", pointcloud_out->width);
+        // RCLCPP_INFO(this->get_logger(), "pcl1_transformed_pcl->points.size(): %ld, pcl2_transformed_pcl->points.size(): %ld", pcl1_transformed_pcl->points.size(), pcl2_transformed_pcl->points.size());
+        for (size_t i = 0; i < pcl1_transformed_pcl->points.size(); ++i) {
+            *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_x_idx]) = pcl1_transformed_pcl->points[i].x;
+            *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_y_idx]) = pcl1_transformed_pcl->points[i].y;
+            *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_z_idx]) = pcl1_transformed_pcl->points[i].z;
+            *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_intensity_idx]) = pcl1_transformed_pcl->points[i].intensity;
+        }
+        for (size_t i = 0; i < pcl2_transformed_pcl->points.size(); ++i) {
+            *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_x_idx]) = pcl2_transformed_pcl->points[i].x;
+            *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_y_idx]) = pcl2_transformed_pcl->points[i].y;
+            *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_z_idx]) = pcl2_transformed_pcl->points[i].z;
+            *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_intensity_idx]) = pcl2_transformed_pcl->points[i].intensity;
         }
     }
 
@@ -154,12 +157,16 @@ private:
 
         // headerのcheckとfieldsの編集(add ring, rename timestamp to time)
         prepare_header_and_fields(pointcloud_out, pcl1, pcl2);
+        // RCLCPP_INFO(this->get_logger(), "pointcloud_out->fields.size(): %ld", pointcloud_out->fields.size());
         // dataのresize
-        resize_ponintcloud_data(pointcloud_out, pcl1);
+        resize_ponintcloud_data(pointcloud_out, pcl1, pcl2);
+        // RCLCPP_INFO(this->get_logger(), "1 pointcloud_out->data.size(): %ld", pointcloud_out->data.size());
         // dataのconcatenate
         concatenate_pointclouds(pointcloud_out, pcl1, pcl2);
+        // RCLCPP_INFO(this->get_logger(), "2 pointcloud_out->data.size(): %ld", pointcloud_out->data.size());
         // ring fieldの復元
         restore_ring_field(pointcloud_out, pcl1);
+        // RCLCPP_INFO(this->get_logger(), "3 pointcloud_out->data.size(): %ld", pointcloud_out->data.size());
 
         pointcloud_pub_->publish(*pointcloud_out);
     }
@@ -175,8 +182,6 @@ private:
     int ring_num_;
     double lidar_diffz_; // 2つのLiDARのz座標の差
     Eigen::Affine3f lidar_diff_transform_1_, lidar_diff_transform_2_;
-
-
 };
 
 } // namespace utils
