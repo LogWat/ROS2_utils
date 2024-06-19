@@ -1,6 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <pcl_ros/impl/transforms.hpp>
+#include <pcl_ros/transforms.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -24,10 +24,23 @@ public:
 private:
     bool checkCompatibility(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl1,
                             const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
-        return (pcl1->is_bigendian == pcl2->is_bigendian) &&
-               (pcl1->point_step == pcl2->point_step) &&
-               (pcl1->fields.size() == pcl2->fields.size()) &&
-               (pcl1->is_dense == pcl2->is_dense);
+        if (pcl1->is_bigendian != pcl2->is_bigendian ||
+            pcl1->point_step != pcl2->point_step ||
+            pcl1->fields.size() != pcl2->fields.size() ||
+            pcl1->is_dense != pcl2->is_dense) {
+            return false;
+        }
+
+        for (size_t i = 0; i < pcl1->fields.size(); ++i) {
+            if (pcl1->fields[i].name != pcl2->fields[i].name ||
+                pcl1->fields[i].offset != pcl2->fields[i].offset ||
+                pcl1->fields[i].datatype != pcl2->fields[i].datatype ||
+                pcl1->fields[i].count != pcl2->fields[i].count) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     void prepare_header_and_fields(sensor_msgs::msg::PointCloud2::SharedPtr& pointcloud_out,
@@ -70,13 +83,17 @@ private:
         // RCLCPP_INFO(this->get_logger(), "pcl1 point size: %d, pcl2 point size: %d", pcl1->width, pcl2->width);
         for (size_t i = 0; i < pcl1->data.size(); i += pcl1->point_step) {
             for (auto &field : pcl1->fields) {
-                memcpy(&pointcloud_out->data[i + field.offset], &pcl1->data[i + field.offset], field.datatype * field.count / 8);
+                memcpy(&pointcloud_out->data[i + field.offset], &pcl1->data[i + field.offset], field.datatype * field.count);
             }
+            // ring fieldは0で初期化
+            *(uint16_t *)(&pointcloud_out->data[i + pcl1->point_step + pcl1->fields.back().offset]) = 0;
         }
         for (size_t i = 0; i < pcl2->data.size(); i += pcl2->point_step) {
             for (auto &field : pcl2->fields) {
-                memcpy(&pointcloud_out->data[i + pcl1->point_step + field.offset], &pcl2->data[i + field.offset], field.datatype * field.count / 8);
+                memcpy(&pointcloud_out->data[i + pcl1->point_step + field.offset], &pcl2->data[i + field.offset], field.datatype * field.count);
             }
+            // ring fieldは0で初期化
+            *(uint16_t *)(&pointcloud_out->data[i + pcl1->point_step + pcl2->fields.back().offset]) = 0;
         }
         pcl::PointCloud<pcl::PointXYZI>::Ptr pcl1_pcl(new pcl::PointCloud<pcl::PointXYZI>);
         pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_pcl(new pcl::PointCloud<pcl::PointXYZI>);
