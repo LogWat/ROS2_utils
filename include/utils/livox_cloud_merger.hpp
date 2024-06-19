@@ -81,19 +81,17 @@ private:
                                 const sensor_msgs::msg::PointCloud2::ConstSharedPtr& pcl2) {
         // 一旦全部pointcloud_outにコピー
         // RCLCPP_INFO(this->get_logger(), "pcl1 point size: %d, pcl2 point size: %d", pcl1->width, pcl2->width);
-        for (size_t i = 0; i < pcl1->data.size(); i += pcl1->point_step) {
-            for (auto &field : pcl1->fields) {
-                memcpy(&pointcloud_out->data[i + field.offset], &pcl1->data[i + field.offset], field.datatype * field.count);
+        // pointcloud_outはpcl1やpcl2よりも1つの点あたりのデータ量(point_step)が大きい
+        for (size_t i = 0; i < pointcloud_out->data.size(); i += pointcloud_out->point_step) {
+            // いくつめのpointか
+            unsigned int idx = i / pointcloud_out->point_step;
+            if (idx < pcl1->width) {
+                memcpy(&pointcloud_out->data[i], &pcl1->data[idx * pcl1->point_step], pcl1->point_step);
+            } else {
+                idx = idx - pcl1->width;
+                unsigned int pcl2_idx = idx * pcl2->point_step;
+                memcpy(&pointcloud_out->data[i], &pcl2->data[pcl2_idx], pcl2->point_step); 
             }
-            // ring fieldは0で初期化
-            *(uint16_t *)(&pointcloud_out->data[i + pcl1->point_step + pcl1->fields.back().offset]) = 0;
-        }
-        for (size_t i = 0; i < pcl2->data.size(); i += pcl2->point_step) {
-            for (auto &field : pcl2->fields) {
-                memcpy(&pointcloud_out->data[i + pcl1->point_step + field.offset], &pcl2->data[i + field.offset], field.datatype * field.count);
-            }
-            // ring fieldは0で初期化
-            *(uint16_t *)(&pointcloud_out->data[i + pcl1->point_step + pcl2->fields.back().offset]) = 0;
         }
         pcl::PointCloud<pcl::PointXYZI>::Ptr pcl1_pcl(new pcl::PointCloud<pcl::PointXYZI>);
         pcl::PointCloud<pcl::PointXYZI>::Ptr pcl2_pcl(new pcl::PointCloud<pcl::PointXYZI>);
@@ -116,8 +114,6 @@ private:
                 out_intensity_idx = i;
             }
         }
-        // RCLCPP_INFO(this->get_logger(), "pointcloud_out point size: %ld", pointcloud_out->width);
-        // RCLCPP_INFO(this->get_logger(), "pcl1_transformed_pcl->points.size(): %ld, pcl2_transformed_pcl->points.size(): %ld", pcl1_transformed_pcl->points.size(), pcl2_transformed_pcl->points.size());
         for (size_t i = 0; i < pcl1_transformed_pcl->points.size(); ++i) {
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_x_idx]) = pcl1_transformed_pcl->points[i].x;
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_y_idx]) = pcl1_transformed_pcl->points[i].y;
