@@ -103,29 +103,33 @@ private:
         pcl::transformPointCloud(*pcl2_pcl, *pcl2_transformed_pcl, lidar_diff_transform_2_);
         // point stepが変わってるのでx, y, z, intensityのみコピー
         size_t out_x_idx, out_y_idx, out_z_idx, out_intensity_idx;
-        for (size_t i = 0; i < pointcloud_out->fields.size(); ++i) {
-            if (pointcloud_out->fields[i].name == "x") {
-                out_x_idx = i;
-            } else if (pointcloud_out->fields[i].name == "y") {
-                out_y_idx = i;
-            } else if (pointcloud_out->fields[i].name == "z") {
-                out_z_idx = i;
-            } else if (pointcloud_out->fields[i].name == "intensity") {
-                out_intensity_idx = i;
+        for (auto &field : pointcloud_out->fields) {
+            if (field.name == "x") {
+                out_x_idx = field.offset;
+            } else if (field.name == "y") {
+                out_y_idx = field.offset;
+            } else if (field.name == "z") {
+                out_z_idx = field.offset;
+            } else if (field.name == "intensity") {
+                out_intensity_idx = field.offset;
             }
         }
-        for (size_t i = 0; i < pcl1_transformed_pcl->points.size(); ++i) {
+        // RCLCPP_INFO(this->get_logger(), "x: %ld, y: %ld, z: %ld, intensity: %ld", out_x_idx, out_y_idx, out_z_idx, out_intensity_idx);
+        size_t i = 0;
+        for (i = 0; i < pcl1_transformed_pcl->points.size(); ++i) {
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_x_idx]) = pcl1_transformed_pcl->points[i].x;
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_y_idx]) = pcl1_transformed_pcl->points[i].y;
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_z_idx]) = pcl1_transformed_pcl->points[i].z;
             *(float *)(&pointcloud_out->data[i * pointcloud_out->point_step + out_intensity_idx]) = pcl1_transformed_pcl->points[i].intensity;
         }
-        for (size_t i = 0; i < pcl2_transformed_pcl->points.size(); ++i) {
+        // RCLCPP_INFO(this->get_logger(), "i: %ld, pcl1_transformed_pcl->points.size(): %ld", i, pcl1_transformed_pcl->points.size());
+        for (i = 0; i < pcl2_transformed_pcl->points.size(); ++i) {
             *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_x_idx]) = pcl2_transformed_pcl->points[i].x;
             *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_y_idx]) = pcl2_transformed_pcl->points[i].y;
             *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_z_idx]) = pcl2_transformed_pcl->points[i].z;
             *(float *)(&pointcloud_out->data[(i + pcl1_transformed_pcl->points.size()) * pointcloud_out->point_step + out_intensity_idx]) = pcl2_transformed_pcl->points[i].intensity;
         }
+        // RCLCPP_INFO(this->get_logger(), "i: %ld, pcl2_transformed_pcl->points.size(): %ld", i, pcl2_transformed_pcl->points.size());
     }
 
     void restore_ring_field(sensor_msgs::msg::PointCloud2::SharedPtr& pointcloud_out,
