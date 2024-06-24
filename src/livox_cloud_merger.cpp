@@ -33,8 +33,8 @@ LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
         // 仮想LiDARへの変換行列の設定
         lidar_diff_transform_1_.setIdentity();
         lidar_diff_transform_2_.setIdentity();
-        lidar_diff_transform_1_.translation() = Eigen::Vector3f(0.0, 0.0, 0.0);
-        lidar_diff_transform_2_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_);
+        lidar_diff_transform_1_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_ / 2.0);
+        lidar_diff_transform_2_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_ / 2.0); // 移動->回転だから正
         lidar_diff_transform_2_.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));
     }
 
