@@ -32,7 +32,7 @@
     <include file="$(find-pkg-share utils)/launch/ekf_localizer.launch.xml"/>
 
     <!-- initializer -->
-    <include file="$(find-pkg-share utils)/launch/pose_initializer.launch.xml"/>
+    <!-- <include file="$(find-pkg-share utils)/launch/pose_initializer.launch.xml"/> -->
 
     <!-- ndt scan match -->
     <!-- <include file="$(find-pkg-share utils)/launch/ndt_scan_matcher.launch.xml"/> -->

@@ -1,7 +1,7 @@
 <launch>
   <arg name="param_file" default="$(find-pkg-share ekf_localizer)/config/ekf_localizer.param.yaml"/>
 
-  <arg name="input_initial_pose_name" default="initialpose3d"/>
+  <arg name="input_initial_pose_name" default="initialpose"/>
   <arg name="input_trigger_node_service_name" default="trigger_node" description="trigger node service"/>
 
   <!-- input topic name -->
