@@ -22,10 +22,10 @@ LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
         this->get_parameter("lidar_diffz", lidar_diffz_);
         this->get_parameter("ring_num", ring_num_);
 
-        pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic_, 10);
+        pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic_, qos_lidar);
 
-        pointcloud1_sub_.subscribe(this, pointcloud1_topic_);
-        pointcloud2_sub_.subscribe(this, pointcloud2_topic_);
+        pointcloud1_sub_.subscribe(this, pointcloud1_topic_, qos_profile_lidar);
+        pointcloud2_sub_.subscribe(this, pointcloud2_topic_, qos_profile_lidar);
 
         sync_.reset(new Sync(SyncPolicy(10), pointcloud1_sub_, pointcloud2_sub_));
         sync_->registerCallback(&LivoxCloudMerger::callback, this);
@@ -33,8 +33,8 @@ LivoxCloudMerger::LivoxCloudMerger(const rclcpp::NodeOptions & options)
         // 仮想LiDARへの変換行列の設定
         lidar_diff_transform_1_.setIdentity();
         lidar_diff_transform_2_.setIdentity();
-        lidar_diff_transform_1_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_ / 2.0);
-        lidar_diff_transform_2_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_ / 2.0); // 移動->回転だから正
+        lidar_diff_transform_1_.translation() = Eigen::Vector3f(0.0, 0.0, 0.0);
+        lidar_diff_transform_2_.translation() = Eigen::Vector3f(0.0, 0.0, lidar_diffz_); // 移動->回転だから正
         lidar_diff_transform_2_.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));
     }
 

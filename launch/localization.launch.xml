@@ -1,0 +1,60 @@
+<launch>
+  <set_parameter name="use_sim_time" value="true"/>
+
+  <group>
+    <!-- <push-ros-namespace namespace="utils"/> -->
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="livox_util_container" namespace="" output="screen">
+      <composable_node pkg="utils" plugin="utils::LivoxCloudMerger" name="livox_cloud_merger" namespace="">
+        <param name="cloud_topic" value="/livox/lidar"/>
+        <param name="pointcloud1_topic" value="/livox/lidar_192_168_1_101"/>
+        <param name="pointcloud2_topic" value="/livox/lidar_192_168_1_102"/>
+        <param name="output_topic" value="/livox/merged_cloud"/>
+        <param name="frame_id" value="livox_frame"/>
+        <param name="lidar_diffz" value="0.60"/>
+        <param name="ring_num" value="10"/>
+      </composable_node>
+      <composable_node pkg="utils" plugin="utils::LivoxImuCollector" name="livox_imu" namespace="">
+        <param name="imu_sub_topic" value="/livox/imu_192_168_1_101"/>
+        <param name="imu_pub_topic" value="/livox/imu"/>
+        <param name="imu_frame_id" value="livox_frame"/>
+      </composable_node>
+      <composable_node pkg="utils" plugin="utils::TwistParser" name="twist_parser" namespace="">
+        <param name="twist_raw_topic" value="/snd_vel"/>
+      </composable_node>
+    </node_container>
+  </group>
+
+    <!-- tf -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.665 0.0 0.0 0.0 base_link livox_frame" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.395 0.0 0.0 0.0 base_link velodyne" />
+
+    <!-- ekf -->
+    <include file="$(find-pkg-share utils)/launch/ekf_localizer.launch.xml"/>
+
+    <!-- initializer -->
+    <include file="$(find-pkg-share utils)/launch/pose_initializer.launch.xml"/>
+
+    <!-- ndt scan match -->
+    <!-- <include file="$(find-pkg-share utils)/launch/ndt_scan_matcher.launch.xml"/> -->
+
+    <!-- map loader -->
+    <include file="$(find-pkg-share utils)/launch/pointcloud_map_loader.launch.xml"/>
+
+    <!-- preprosessor -->
+    <!-- <include file="$(find-pkg-share utils)/launch/preprocessor.launch.xml"/> -->
+    <include file="$(find-pkg-share pointcloud_preprocessor)/launch/basic_preprocessor.launch.py" />
+    <!-- gyro_odom -->
+    <include file="$(find-pkg-share utils)/launch/gyro_odometer.launch.xml"/>
+
+  <!-- rviz -->
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"/>
+
+
+<!-- ros2 service call /trigger_node std_srvs/srv/SetBool "data: true" -->
+<!-- ros2 service call /motor_power std_srvs/SetBool "{data: true}" -->
+
+    <!-- rosbag -->
+    <!-- <executable cmd="ros2 bag play $(var bag)" output="screen" name="rosbag_play" /> -->
+
+
+</launch>

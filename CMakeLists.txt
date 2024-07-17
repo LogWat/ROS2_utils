@@ -19,10 +19,14 @@ find_package(tf2_geometry_msgs REQUIRED)
 add_library(livox_cloud_merger SHARED src/livox_cloud_merger.cpp)
 add_library(vel2odom SHARED src/vel2odom.cpp)
 add_library(livox_imu_collector SHARED src/livox_imu_collector.cpp)
+add_library(twist_parser SHARED src/twist_parser.cpp)
+
+# add_executable(livox_imu_ext src/livox_imu_ext.cpp)
 
 rclcpp_components_register_nodes(livox_cloud_merger "utils::LivoxCloudMerger")
 rclcpp_components_register_nodes(vel2odom "utils::Vel2Odom")
 rclcpp_components_register_nodes(livox_imu_collector "utils::LivoxImuCollector")
+rclcpp_components_register_nodes(twist_parser "utils::TwistParser")
 
 target_compile_definitions(livox_cloud_merger
   PRIVATE "LIVOX_CLOUD_MERGER_BUILDING_LIBRARY"
@@ -32,6 +36,9 @@ target_compile_definitions(vel2odom
 )
 target_compile_definitions(livox_imu_collector
   PRIVATE "LIVOX_IMU_COLLECTOR_BUILDING_LIBRARY"
+)
+target_compile_definitions(twist_parser
+  PRIVATE "TWIST_PARSER_BUILDING_LIBRARY"
 )
 
 target_include_directories(livox_cloud_merger PUBLIC
@@ -43,10 +50,15 @@ target_include_directories(vel2odom PUBLIC
 target_include_directories(livox_imu_collector PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(twist_parser PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
 
 target_compile_features(livox_cloud_merger PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_compile_features(vel2odom PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_compile_features(livox_imu_collector PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(twist_parser PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 ament_target_dependencies(
   livox_cloud_merger
@@ -74,13 +86,30 @@ ament_target_dependencies(
   "rclcpp_components"
 )
 
+ament_target_dependencies(
+  twist_parser
+  "rclcpp"
+  "geometry_msgs"
+  "rclcpp_components"
+)
+
+# ament_target_dependencies(
+#   livox_imu_ext
+#   "rclcpp"
+#   "sensor_msgs"
+# )
+
 install(TARGETS livox_cloud_merger
   DESTINATION lib)
 install(TARGETS vel2odom
   DESTINATION lib)
 install (TARGETS livox_imu_collector
   DESTINATION lib)
+install (TARGETS twist_parser
+  DESTINATION lib)
 install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

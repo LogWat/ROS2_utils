@@ -11,6 +11,25 @@
 #include <Eigen/Dense>
 #include <string>
 
+rmw_qos_profile_t qos_profile_lidar{
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    5,
+    RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+    RMW_QOS_POLICY_DURABILITY_VOLATILE,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false
+};
+
+auto qos_lidar = rclcpp::QoS(
+    rclcpp::QoSInitialization(
+        qos_profile_lidar.history,
+        qos_profile_lidar.depth
+    ),
+    qos_profile_lidar);
+
 namespace utils {
 
 class LivoxCloudMerger : public rclcpp::Node {

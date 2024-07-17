@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="bag" default="test.bag"/>
+  <!-- <arg name="use_sim_time" default="true"/> -->
+
+  <group>
+    <!-- <push-ros-namespace namespace="utils"/> -->
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="livox_util_container" namespace="" output="screen">
+      <composable_node pkg="utils" plugin="utils::LivoxCloudMerger" name="livox_cloud_merger" namespace="">
+        <param name="pointcloud1_topic" value="/livox/lidar_192_168_1_101"/>
+        <param name="pointcloud2_topic" value="/livox/lidar_192_168_1_102"/>
+        <param name="output_topic" value="/livox/merged_cloud"/>
+        <param name="frame_id" value="livox_frame"/>
+        <param name="lidar_diffz" value="0.665"/>
+        <param name="ring_num" value="10"/>
+        <!-- <extra_arg name="use_intra_process_comms" value="true" /> -->
+      </composable_node>
+      <composable_node pkg="utils" plugin="utils::LivoxImuCollector" name="livox_imu_collector" namespace="">
+        <param name="imu_sub_topic" value="/livox/imu_192_168_1_101"/>
+        <param name="imu_pub_topic" value="/livox/imu"/>
+        <param name="frame_id" value="livox_frame"/>
+        <!-- <extra_arg name="use_intra_process_comms" value="true" /> -->
+      </composable_node>
+    </node_container>
+  </group>
+
+  <!-- tf -->
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.665 0.0 0.0 0.0 base_link livox_frame" />
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.295 0.0 0.0 0.0 base_link velodyne" />
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.395 0.0 0.0 0.0 base_link hesai_lidar" />
+  <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.378 0.0 0.0 0.0 0.0 0.0 base_link front_realsense_link" /> -->
+  <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.6 0.0 0.0 0.0 base_footprint base_link" /> -->
+  <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="static_transform_publisher" output="screen" args="0.0 0.0 0.0 0.0 0.0 0.0 base_footprint base_link"/> -->
+
+  <!-- lio-sam -->
+  <include file="$(find-pkg-share lio_sam)/launch/run.launch.py"/>
+
+ 
+  <!-- rosbag -->
+  <executable cmd="ros2 bag play $(var bag) --clock -r 2.0" output="screen" name="rosbag_play" />
+
+  <!-- rviz -->
+  <!-- <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"/> -->
+</launch>

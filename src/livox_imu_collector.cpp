@@ -3,10 +3,8 @@
 
 namespace utils {
 
-LivoxIMUCollector::LivoxIMUCollector(const rclcpp::NodeOptions &options)
-    : Node("livox_imu_collector", options),
-        acc_coff_(1.0),
-        gyro_coff_(1.0)
+LivoxImuCollector::LivoxImuCollector(const rclcpp::NodeOptions &options)
+    : Node("livox_imu_collector", options)
 {
     // パラメータの取得
     this->declare_parameter<std::string>("imu_sub_topic", "imu");
@@ -33,8 +31,8 @@ LivoxIMUCollector::LivoxIMUCollector(const rclcpp::NodeOptions &options)
     this->get_parameter("acc_coff", acc_coff_);
     this->get_parameter("gyro_coff", gyro_coff_);
 
-    pub_imu_ = this->create_publisher<sensor_msgs::msg::Imu>(imu_pub_topic_, 10);
-    sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_sub_topic_, 10, std::bind(&LivoxIMUCollector::callback, this, std::placeholders::_1));
+    pub_imu_ = this->create_publisher<sensor_msgs::msg::Imu>(imu_pub_topic_, qos_imu);
+    sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_sub_topic_, qos_imu, std::bind(&LivoxImuCollector::callback, this, std::placeholders::_1));
 
     // LiDAR間の変換行列の設定
     tf2::Quaternion q;
@@ -44,8 +42,10 @@ LivoxIMUCollector::LivoxIMUCollector(const rclcpp::NodeOptions &options)
     imu_diff_transform_.setOrigin(v);
 }
 
-void LivoxIMUCollector::callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
+void LivoxImuCollector::callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
     sensor_msgs::msg::Imu imu_corrected = *msg;
+    imu_corrected.header.frame_id = imu_frame_id_;
+    imu_corrected.header.stamp = msg->header.stamp;
 
     // 加速度の補正
     tf2::Vector3 acc(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
@@ -67,4 +67,4 @@ void LivoxIMUCollector::callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
 } // namespace utils
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(utils::LivoxIMUCollector)
+RCLCPP_COMPONENTS_REGISTER_NODE(utils::LivoxImuCollector)

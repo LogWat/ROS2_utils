@@ -8,13 +8,32 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <string>
 
+rmw_qos_profile_t qos_profile_imu{
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    5,
+    RMW_QOS_POLICY_RELIABILITY_RELIABLE,
+    RMW_QOS_POLICY_DURABILITY_VOLATILE,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false
+};
+
+auto qos_imu = rclcpp::QoS(
+    rclcpp::QoSInitialization(
+        qos_profile_imu.history,
+        qos_profile_imu.depth
+    ),
+    qos_profile_imu);
+
 namespace utils {
 
-class LivoxIMUCollector : public rclcpp::Node
+class LivoxImuCollector : public rclcpp::Node
 {
 public:
-    LivoxIMUCollector(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
-    LivoxIMUCollector(
+    LivoxImuCollector(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
+    LivoxImuCollector(
         const std::string &name_space,
         const rclcpp::NodeOptions &options = rclcpp::NodeOptions()
     );

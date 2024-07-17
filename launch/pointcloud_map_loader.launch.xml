@@ -1,0 +1,46 @@
+<launch>
+  <!-- map files -->
+  <arg name="pointcloud_map_path" default="/home/watanabe-i/maps/0705/LOAM2/GlobalMap.pcd"/>
+  <arg name="pointcloud_map_metadata_path" default=""/>
+
+  <!-- Parameter files -->
+  <arg name="pointcloud_map_loader_param_path" default="$(find-pkg-share utils)/config/pointcloud_map_loader.param.yaml"/>
+  <arg name="map_tf_generator_param_path" default="$(find-pkg-share autoware_launch)/config/map/map_tf_generator.param.yaml"/>
+
+  <!-- whether use intra-process -->
+  <arg name="use_intra_process" default="false"/>
+
+  <!-- select container type -->
+  <arg name="use_multithread" default="false"/>
+  <let name="container_type" value="component_container" unless="$(var use_multithread)"/>
+  <let name="container_type" value="component_container_mt" if="$(var use_multithread)"/>
+
+  <group>
+    <push-ros-namespace namespace="map"/>
+
+    <node_container pkg="rclcpp_components" exec="$(var container_type)" name="map_container" namespace="" output="both">
+      <composable_node pkg="map_loader" plugin="PointCloudMapLoaderNode" name="pointcloud_map_loader">
+        <param from="$(var pointcloud_map_loader_param_path)"/>
+        <param name="pcd_paths_or_directory" value="[$(var pointcloud_map_path)]"/>
+        <param name="pcd_metadata_path" value="$(var pointcloud_map_metadata_path)"/>
+        <remap from="output/pointcloud_map" to="pointcloud_map"/>
+        <remap from="output/pointcloud_map_metadata" to="pointcloud_map_metadata"/>
+        <remap from="service/get_partial_pcd_map" to="/map/get_partial_pointcloud_map"/>
+        <remap from="service/get_differential_pcd_map" to="/map/get_differential_pointcloud_map"/>
+        <remap from="service/get_selected_pcd_map" to="/map/get_selected_pointcloud_map"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
+
+      <composable_node pkg="map_tf_generator" plugin="PcdMapTFGeneratorNode" name="pcd_map_tf_generator">
+        <param from="$(var map_tf_generator_param_path)"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
+
+      <!-- <composable_node pkg="map_tf_generator" plugin="VectorMapTFGeneratorNode" name="vector_map_tf_generator">
+        <param from="$(var map_tf_generator_param_path)"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node> -->
+    </node_container>
+  </group>
+
+</launch>
